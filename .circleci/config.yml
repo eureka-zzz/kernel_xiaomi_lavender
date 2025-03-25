@@ -1,32 +1,53 @@
 version: 2.1
 
+executors:
+  kernel_builder:
+    docker:
+      - image: cimg/base:current  # Bisa diganti dengan image lain sesuai kebutuhan
+    resource_class: large  # Bisa diubah ke medium jika pakai akun gratis
+    working_directory: ~/kernel_build
+
 jobs:
   build_kernel:
-    docker:
-      - image: ubuntu:22.04  # Menggunakan Ubuntu 22.04
-    resource_class: large
+    executor: kernel_builder
     steps:
-      - checkout  # Clone repo kernel
+      - checkout:
+          fetch-depth: 1  # Hanya mengambil commit terbaru untuk mempercepat cloning
+
       - run:
           name: Install Dependencies
           command: |
-            apt update && apt install -y bc bison flex build-essential \
-              git python3 libssl-dev libncurses5-dev \
-              crossbuild-essential-arm64 libelf-dev curl
+            sudo apt update && sudo apt install -y \
+              git curl bc build-essential ccache \
+              flex bison libssl-dev libelf-dev \
+              clang lld python3-pip
+
       - run:
-          name: Setup KernelSU Next
+          name: Clone Kernel Source (Shallow)
           command: |
-            cd kernel_xiaomi_lavender  # Ganti dengan folder kernel yang sesuai
+            git clone --depth=1 https://github.com/eureka-zzz/kernel_xiaomi_lavender.git kernel_source
+            cd kernel_source
+            echo "Kernel source cloned successfully!"
+
+      - run:
+          name: Apply KernelSU Next Patch
+          command: |
+            cd kernel_source
             curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next-susfs/kernel/setup.sh" | bash -s next-susfs
+
       - run:
           name: Build Kernel
           command: |
-            cd kernel_xiaomi_lavender
-            make ARCH=arm64 O=out defconfig
-            make ARCH=arm64 O=out -j$(nproc)
+            cd kernel_source
+            export ARCH=arm64
+            export SUBARCH=arm64
+            export CROSS_COMPILE=aarch64-linux-gnu-
+            make lavender_defconfig
+            make -j$(nproc)
+
       - store_artifacts:
-          path: kernel_xiaomi_lavender/out/arch/arm64/boot/Image.gz-dtb
-          destination: Image.gz-dtb
+          path: kernel_source/out/arch/arm64/boot/Image.gz-dtb
+          destination: kernel/Image.gz-dtb
 
 workflows:
   version: 2
