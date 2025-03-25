@@ -5,7 +5,7 @@ executors:
     docker:
       - image: cimg/base:current  # Bisa diganti dengan image lain sesuai kebutuhan
     resource_class: large  # Bisa diubah ke medium jika pakai akun gratis
-    working_directory: ~/kernel_build
+    working_directory: ~/kernel_build  # Direktori ini akan digunakan sebagai working directory
 
 jobs:
   build_kernel:
@@ -25,20 +25,21 @@ jobs:
       - run:
           name: Clone Kernel Source (Shallow)
           command: |
-            git clone --depth=1 https://github.com/eureka-zzz/kernel_xiaomi_lavender.git kernel_source
-            cd kernel_source
+            mkdir -p ~/kernel_build  # Pastikan direktori kernel_build ada
+            git clone --depth=1 https://github.com/eureka-zzz/kernel_xiaomi_lavender.git ~/kernel_build/kernel_source
+            cd ~/kernel_build/kernel_source
             echo "Kernel source cloned successfully!"
 
       - run:
           name: Apply KernelSU Next Patch
           command: |
-            cd kernel_source
+            cd ~/kernel_build/kernel_source
             curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next-susfs/kernel/setup.sh" | bash -s next-susfs
 
       - run:
           name: Build Kernel
           command: |
-            cd kernel_source
+            cd ~/kernel_build/kernel_source
             export ARCH=arm64
             export SUBARCH=arm64
             export CROSS_COMPILE=aarch64-linux-gnu-
@@ -46,7 +47,7 @@ jobs:
             make -j$(nproc)
 
       - store_artifacts:
-          path: kernel_source/out/arch/arm64/boot/Image.gz-dtb
+          path: ~/kernel_build/kernel_source/out/arch/arm64/boot/Image.gz-dtb
           destination: kernel/Image.gz-dtb
 
 workflows:
