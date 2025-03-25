@@ -39,6 +39,12 @@ jobs:
             curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next-susfs/kernel/setup.sh" | bash -s next-susfs
 
       - run:
+          name: Apply 69_hide_stuff.patch
+          command: |
+            cd ~/ksunext-build/kernel_source/common
+            patch -p1 -F 3 < ~/ksunext-build/kernel_source/69_hide_stuff.patch
+
+      - run:
           name: Build Kernel
           command: |
             cd ~/ksunext-build/kernel_source
@@ -54,6 +60,6 @@ jobs:
 
 workflows:
   version: 2
-  build_and_test:
+  build_and_deploy:
     jobs:
       - build_kernel
